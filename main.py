@@ -8,8 +8,15 @@ def load_level(file_path):
 
     width, height = map(int, level_data[0].split())
     level_matrix = [[int(tile) if tile.isdigit() else tile for tile in line] for line in level_data[1:]]
-    
-    return width, height, level_matrix
+
+    finish_line_pos = None
+    for y, row in enumerate(level_matrix):
+        for x, tile in enumerate(row):
+            if tile == 'c':
+                finish_line_pos = (x, y)
+
+    return width, height, level_matrix, finish_line_pos
+
 
 def load_images():
     wall_image = pygame.image.load("assets/wallsemFundo.png")
@@ -26,6 +33,9 @@ def load_images():
     player_down = pygame.transform.scale(player_down, (32, 32))
     player_left = pygame.transform.scale(player_left, (32, 32))
     player_right = pygame.transform.scale(player_right, (32, 32))
+
+    # Redimensiona a imagem da linha de chegada para 32x32 pixels
+    finish_line_image = pygame.transform.scale(finish_line_image, (32, 32))
 
     return wall_image, path_image, player_up, player_down, player_left, player_right, finish_line_image
 
@@ -73,7 +83,7 @@ def get_player_direction(level_matrix, x, y):
         return 0  # Caso padrão (para cima)
 
 def move_player(level_matrix, current_pos, new_pos):
-    if level_matrix[new_pos[1]][new_pos[0]] == 0:
+    if level_matrix[new_pos[1]][new_pos[0]] in [0, 'c']:
         level_matrix[current_pos[1]][current_pos[0]] = 0
         level_matrix[new_pos[1]][new_pos[0]] = 'm'
         return True
@@ -81,8 +91,10 @@ def move_player(level_matrix, current_pos, new_pos):
 
 block_size = 32
 
-level_width, level_height, level_matrix = load_level("maze16x16.txt")
+level_width, level_height, level_matrix, finish_line_pos = load_level("maze16x16.txt")
 pygame.init()
+pygame.mixer.music.load('./assets/audio/op.mp3')
+
 screen = pygame.display.set_mode((level_width * block_size, level_height * block_size))
 block_size = min(screen.get_width() // level_width, screen.get_height() // level_height)
 screen.fill((0, 0, 255))
@@ -116,23 +128,27 @@ def main():
             new_pos = player_pos - pygame.Vector2(0, player_speed)
             if move_player(level_matrix, (int(player_pos.x), int(player_pos.y)), (int(new_pos.x), int(new_pos.y))):
                 player_pos = new_pos
+                time.sleep(0.1)
         if keys[pygame.K_s]:
             new_pos = player_pos + pygame.Vector2(0, player_speed)
             if move_player(level_matrix, (int(player_pos.x), int(player_pos.y)), (int(new_pos.x), int(new_pos.y))):
                 player_pos = new_pos
+                time.sleep(0.1)
         if keys[pygame.K_a]:
             new_pos = player_pos - pygame.Vector2(player_speed, 0)
             if move_player(level_matrix, (int(player_pos.x), int(player_pos.y)), (int(new_pos.x), int(new_pos.y))):
                 player_pos = new_pos
+                time.sleep(0.1)
         if keys[pygame.K_d]:
             new_pos = player_pos + pygame.Vector2(player_speed, 0)
             if move_player(level_matrix, (int(player_pos.x), int(player_pos.y)), (int(new_pos.x), int(new_pos.y))):
                 player_pos = new_pos
+                time.sleep(0.1)
 
-        if level_matrix[int(player_pos.y)][int(player_pos.x)] == 'c':
+        if player_pos == finish_line_pos:
             print("Parabéns! Você chegou à linha de chegada!")
-            time.sleep(4)  # Aguarda 4 segundos
-            running = False  # Encerra o jogo
+            pygame.quit()
+            sys.exit()
 
         pygame.display.flip()
         clock.tick(60)
